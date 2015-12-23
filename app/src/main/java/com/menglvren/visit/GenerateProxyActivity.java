@@ -33,6 +33,8 @@ public class  GenerateProxyActivity extends Activity {
 
     private int generate_click_count=0;
     private final int TIME_OUT=2*1000;
+
+    private boolean isExit=false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,6 +80,9 @@ public class  GenerateProxyActivity extends Activity {
                     @Override
                     public void run() {
                         for (Server server : NetConfig.servers) {
+                            if(isExit){
+                                break;
+                            }
                             if (isValidIP(server.ip, server.port)) {
                                 Log.i("ly", "valid ip-->" + server.ip);
                                 NetConfig.validIps.add(server);
@@ -88,7 +93,7 @@ public class  GenerateProxyActivity extends Activity {
                                 NetConfig.badIps.add(server);
                             }
                         }
-                        handler.sendEmptyMessage(CHECK_FINISH);
+                        if(!isExit)handler.sendEmptyMessage(CHECK_FINISH);
                     }
                 }.start();
 
@@ -196,6 +201,7 @@ public class  GenerateProxyActivity extends Activity {
         super.onDestroy();
         Log.i("ly", "onDestroy");
         handler.removeCallbacksAndMessages(null);
+        isExit=true;
         ProxySetting.cancelProxy();
     }
 }
