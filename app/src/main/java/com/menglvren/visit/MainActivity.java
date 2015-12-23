@@ -12,16 +12,18 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 /***
- * 每10s刷一个节目：载入节目页面后，3秒点击，点击耗时0.5秒，6.5秒播放
+ * 每10s刷一个节目：载入节目页面后，3.5秒点击，点击耗时0.5秒，6秒播放
  */
 public class MainActivity extends Activity {
     public static final int EVENT_SIMULATE_CLICK = 0;
-    public static int DELAY_PLAY = 3000;
+    public static final int EVENT_CHANGE_PROXY = 1;
+    public static int DELAY_PLAY = 3500;
     public static int DELAY_SIMULATE_CLICK = 500;
 
     WebView mainWeb;
@@ -44,6 +46,13 @@ public class MainActivity extends Activity {
                 switch (msg.what) {
                     case EVENT_SIMULATE_CLICK:
                         setSimulateClick(newWeb, newWeb.getWidth() / 2, newWeb.getWidth() / 2);
+                        break;
+                    case EVENT_CHANGE_PROXY:
+                        Server server = NetConfig.validIps.get(NetConfig.validIpIndex);
+                        NetConfig.validIpIndex = (NetConfig.validIpIndex + 1) % NetConfig.validIps.size();
+                        Log.i("ly", "mainWeb status-->config proxy ip=" + server.ip);
+                        configProxy(newWeb, server.ip, Integer.parseInt(server.port));
+
                         break;
                     default:
                         break;
@@ -106,23 +115,13 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public void changeProxy() {
 
-                final Server server=NetConfig.validIps.get(NetConfig.validIpIndex);
-                if(server.ip.equals(mIp)){
-                    Log.i("ly","duplicate server ,return");
-                    return;
-                }
-                NetConfig.validIpIndex =(NetConfig.validIpIndex +1)/NetConfig.validIps.size();
-                Log.i("ly", "mainWeb status-->config proxy ip=" + server.ip);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        configProxy(newWeb, server.ip, Integer.getInteger(server.port));
+                        handler.sendEmptyMessage(EVENT_CHANGE_PROXY);
                     }
                 });
 
-                mIp=server.ip;
-                mPort=Integer.parseInt(server.port);
-                Log.i("ly", "mainWeb status-->config proxy finish");
             }
         }, "proxy");
 
@@ -132,6 +131,8 @@ public class MainActivity extends Activity {
     private void configNewWeb() {
         newWeb = (WebView) findViewById(R.id.newWeb);
         newWeb.getSettings().setJavaScriptEnabled(true);
+        newWeb.getSettings().setAppCacheEnabled(false);
+        newWeb.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
         newWeb.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -173,7 +174,7 @@ public class MainActivity extends Activity {
                     "window.proxy.changeProxy();"+
                     "clickItems(i);" +
                     "var len=document.getElementsByClassName(\"v-link\").length;" +
-                    "setTimeout(\"task()\",10000*len);" +
+                    "setTimeout(\"task()\",10000*2);" +
                 "};" +
                 "function clickItems(i){" +
                     "var collection=document.getElementsByClassName(\"v-link\");" +

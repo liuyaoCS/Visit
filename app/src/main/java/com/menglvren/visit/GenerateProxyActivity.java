@@ -22,7 +22,7 @@ import java.io.InputStreamReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class GenerateProxyActivity extends Activity {
+public class  GenerateProxyActivity extends Activity {
     Button generate,check,start;
     TextView generate_text,check_text;
 
@@ -50,6 +50,7 @@ public class GenerateProxyActivity extends Activity {
                         break;
                     case CHECK_FINISH:
                         check_text.setText("有效代理："+NetConfig.validIps.size()+" done!");
+                        lauchMain();
                         break;
                     default:
                         break;
@@ -81,6 +82,7 @@ public class GenerateProxyActivity extends Activity {
                                 Log.i("ly","valid ip-->"+server.ip);
                                 NetConfig.validIps.add(server);
                                 handler.sendEmptyMessage(UPDATE_VALIDIP_PROXY);
+                                //if(NetConfig.validIps.size()>1)break;
                             }else{
                                 Log.i("ly","bad ip-->"+server.ip);
                                 NetConfig.badIps.add(server);
@@ -95,11 +97,15 @@ public class GenerateProxyActivity extends Activity {
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent it=new Intent(GenerateProxyActivity.this,MainActivity.class);
-                startActivity(it);
-                finish();
+                lauchMain();
             }
         });
+    }
+    private void lauchMain(){
+        cancelProxy();
+        Intent it=new Intent(GenerateProxyActivity.this,MainActivity.class);
+        startActivity(it);
+        finish();
     }
     private void generateProxys(final int click_count){
         final int page=click_count;
@@ -162,7 +168,9 @@ public class GenerateProxyActivity extends Activity {
         get.setParams(params);
 
         System.setProperty("http.proxyHost", ip);
-        System.setProperty("http.proxyPort",port);
+        System.setProperty("http.proxyPort", port);
+        System.setProperty("https.proxyHost", ip);
+        System.setProperty("https.proxyPort", port);
 
         HttpClient hClient = null;
         try {
@@ -180,10 +188,18 @@ public class GenerateProxyActivity extends Activity {
             return false;
         }
     }
+    private void cancelProxy(){
+        System.setProperty("http.proxyHost", "");
+        System.setProperty("http.proxyPort","");
+        System.setProperty("https.proxyHost", "");
+        System.setProperty("https.proxyPort", "");
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        Log.i("ly", "onDestroy");
         handler.removeCallbacksAndMessages(null);
+        cancelProxy();
     }
 }
