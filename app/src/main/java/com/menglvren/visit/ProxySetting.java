@@ -73,6 +73,56 @@ public class ProxySetting {
             e.printStackTrace();
         }
     }
+    public static void clearKitKatWebViewProxy(Context appContext) {
+        System.setProperty("http.proxyHost", "");
+        System.setProperty("http.proxyPort", "");
+        System.setProperty("https.proxyHost", "");
+        System.setProperty("https.proxyPort", "");
+        try {
+            Class applictionCls = Class.forName("android.app.Application");
+            Field loadedApkField = applictionCls.getDeclaredField("mLoadedApk");
+            loadedApkField.setAccessible(true);
+            Object loadedApk = loadedApkField.get(appContext);
+            Class loadedApkCls = Class.forName("android.app.LoadedApk");
+            Field receiversField = loadedApkCls.getDeclaredField("mReceivers");
+            receiversField.setAccessible(true);
+            ArrayMap receivers = (ArrayMap) receiversField.get(loadedApk);
+            for (Object receiverMap : receivers.values()) {
+                for (Object rec : ((ArrayMap) receiverMap).keySet()) {
+                    Class clazz = rec.getClass();
+                    if (clazz.getName().contains("ProxyChangeListener")) {
+                        Method onReceiveMethod = clazz.getDeclaredMethod("onReceive", Context.class, Intent.class);
+                        Intent intent = new Intent(Proxy.PROXY_CHANGE_ACTION);
+
+                        /*********** optional, may be need in future *************/
+                        final String CLASS_NAME = "android.net.ProxyProperties";
+                        Class cls = Class.forName(CLASS_NAME);
+                        Constructor constructor = cls.getConstructor(String.class, Integer.TYPE, String.class);
+                        constructor.setAccessible(true);
+                        Object proxyProperties = constructor.newInstance("", "", null);
+                        intent.putExtra("proxy", (Parcelable) proxyProperties);
+                        /*********** optional, may be need in future *************/
+
+                        onReceiveMethod.invoke(rec, appContext, intent);
+                    }
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * for 4.1
@@ -134,6 +184,12 @@ public class ProxySetting {
         Object result = field.get(classInstance);
         field.setAccessible(oldAccessibleValue);
         return result;
+    }
+    public static void cancelProxy(){
+        System.setProperty("http.proxyHost", "");
+        System.setProperty("http.proxyPort","");
+        System.setProperty("https.proxyHost", "");
+        System.setProperty("https.proxyPort", "");
     }
 
 

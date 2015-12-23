@@ -207,9 +207,12 @@ public class MainActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         mainWeb.destroy();
         newWeb.destroy();
-        NetConfig.servers=null;
-        NetConfig.validIps=null;
-        NetConfig.badIps=null;
+        ProxySetting.cancelProxy();
+        //ProxySetting.clearKitKatWebViewProxy(getApplicationContext());
+        NetConfig.servers.clear();
+        NetConfig.validIps.clear();
+        NetConfig.badIps.clear();
         NetConfig.validIpIndex =0;
+        System.exit(0);
     }
 }

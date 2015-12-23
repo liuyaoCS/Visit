@@ -74,17 +74,17 @@ public class  GenerateProxyActivity extends Activity {
         check.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new Thread(){
+                new Thread() {
                     @Override
                     public void run() {
-                        for(Server server:NetConfig.servers){
-                            if(isValidIP(server.ip,server.port)){
-                                Log.i("ly","valid ip-->"+server.ip);
+                        for (Server server : NetConfig.servers) {
+                            if (isValidIP(server.ip, server.port)) {
+                                Log.i("ly", "valid ip-->" + server.ip);
                                 NetConfig.validIps.add(server);
                                 handler.sendEmptyMessage(UPDATE_VALIDIP_PROXY);
                                 //if(NetConfig.validIps.size()>1)break;
-                            }else{
-                                Log.i("ly","bad ip-->"+server.ip);
+                            } else {
+                                Log.i("ly", "bad ip-->" + server.ip);
                                 NetConfig.badIps.add(server);
                             }
                         }
@@ -100,9 +100,10 @@ public class  GenerateProxyActivity extends Activity {
                 lauchMain();
             }
         });
+        start.setEnabled(false);
     }
     private void lauchMain(){
-        cancelProxy();
+        ProxySetting.cancelProxy();
         Intent it=new Intent(GenerateProxyActivity.this,MainActivity.class);
         startActivity(it);
         finish();
@@ -188,18 +189,13 @@ public class  GenerateProxyActivity extends Activity {
             return false;
         }
     }
-    private void cancelProxy(){
-        System.setProperty("http.proxyHost", "");
-        System.setProperty("http.proxyPort","");
-        System.setProperty("https.proxyHost", "");
-        System.setProperty("https.proxyPort", "");
-    }
+
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         Log.i("ly", "onDestroy");
         handler.removeCallbacksAndMessages(null);
-        cancelProxy();
+        ProxySetting.cancelProxy();
     }
 }
