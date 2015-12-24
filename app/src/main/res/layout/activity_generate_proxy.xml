@@ -44,6 +44,17 @@
             android:text="启动"
             android:id="@+id/start"
             android:layout_below="@id/check"/>
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/start">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/log"
+                />
+        </ScrollView>
+
     </RelativeLayout>
 
 

@@ -24,17 +24,18 @@ import java.util.regex.Pattern;
 
 public class  GenerateProxyActivity extends Activity {
     Button generate,check,start;
-    TextView generate_text,check_text;
+    TextView generate_text,check_text,log;
 
     private Handler handler;
     private static final int GENERATE_PROXY=0;
     private static final int UPDATE_VALIDIP_PROXY=1;
     private static final int CHECK_FINISH=2;
+    private static final int UPDATE_LOG=3;
 
     private int generate_click_count=0;
     private final int TIME_OUT=2*1000;
 
-    private boolean isExit=false;
+    private boolean isInterrupted =false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,9 +47,17 @@ public class  GenerateProxyActivity extends Activity {
                 switch (msg.what){
                     case GENERATE_PROXY:
                         generate_text.setText("代理数量："+NetConfig.servers.size());
+                        check.setEnabled(true);
                         break;
                     case UPDATE_VALIDIP_PROXY:
-                        check_text.setText("有效代理："+NetConfig.validIps.size());
+                        check_text.setText("有效代理：" + NetConfig.validIps.size());
+                        if(NetConfig.validIps.size()>0){
+                            start.setEnabled(true);
+                        }
+                        log.append(msg.obj.toString());
+                        break;
+                    case UPDATE_LOG:
+                        log.append(msg.obj.toString());
                         break;
                     case CHECK_FINISH:
                         check_text.setText("有效代理："+NetConfig.validIps.size()+" done!");
@@ -80,25 +89,35 @@ public class  GenerateProxyActivity extends Activity {
                     @Override
                     public void run() {
                         for (Server server : NetConfig.servers) {
-                            if(isExit){
+                            if(isInterrupted){
                                 break;
                             }
+                            Message msg=new Message();
                             if (isValidIP(server.ip, server.port)) {
                                 Log.i("ly", "valid ip-->" + server.ip);
                                 NetConfig.validIps.add(server);
-                                handler.sendEmptyMessage(UPDATE_VALIDIP_PROXY);
+
+                                msg.what=UPDATE_VALIDIP_PROXY;
+                                msg.obj="valid ip-->" + server.ip+"\n";
+
                                 //if(NetConfig.validIps.size()>1)break;
                             } else {
                                 Log.i("ly", "bad ip-->" + server.ip);
                                 NetConfig.badIps.add(server);
+
+                                msg.what=UPDATE_LOG;
+                                msg.obj="bad ip-->" + server.ip+"\n";
+
                             }
+                            handler.sendMessage(msg);
                         }
-                        if(!isExit)handler.sendEmptyMessage(CHECK_FINISH);
+                        if(!isInterrupted)handler.sendEmptyMessage(CHECK_FINISH);
                     }
                 }.start();
 
             }
         });
+        check.setEnabled(false);
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -106,9 +125,11 @@ public class  GenerateProxyActivity extends Activity {
             }
         });
         start.setEnabled(false);
+        log= (TextView) findViewById(R.id.log);
     }
     private void lauchMain(){
         ProxySetting.cancelProxy();
+        isInterrupted=true;
         Intent it=new Intent(GenerateProxyActivity.this,MainActivity.class);
         startActivity(it);
         finish();
@@ -201,7 +222,7 @@ public class  GenerateProxyActivity extends Activity {
         super.onDestroy();
         Log.i("ly", "onDestroy");
         handler.removeCallbacksAndMessages(null);
-        isExit=true;
+        isInterrupted =true;
         ProxySetting.cancelProxy();
     }
 }
