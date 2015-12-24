@@ -153,6 +153,7 @@ public class MainActivity extends Activity {
     private void configProxy(WebView web,String ip,int port){
         if(Build.VERSION.SDK_INT== Build.VERSION_CODES.KITKAT){
             ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(),ip,port);
+            //ProxySetting.clearKitKatWebViewProxy(web.getContext().getApplicationContext());
         }else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN
                 && Build.VERSION.SDK_INT<Build.VERSION_CODES.KITKAT){
             ProxySetting.setProxyICSPlus(web,ip,port,"");

@@ -5,10 +5,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RadioButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -19,12 +22,14 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class  GenerateProxyActivity extends Activity {
     Button generate,check,start;
     TextView generate_text,check_text,log;
+    RadioButton speedUpButton,vipButton;
 
     private Handler handler;
     private static final int GENERATE_PROXY=0;
@@ -36,11 +41,33 @@ public class  GenerateProxyActivity extends Activity {
     private final int TIME_OUT=2*1000;
 
     private boolean isInterrupted =false;
+
+    IpListCache ipListCache;
+    HashSet<String> whiteIpList,blackIpList;
+
+    private boolean isDebug=false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_generate_proxy);
 
+        initHandler();
+        initView();
+        initIpCache();
+
+    }
+    private void initIpCache(){
+        ipListCache=new IpListCache(this);
+        whiteIpList=ipListCache.getWhiteIpList();
+        if(whiteIpList==null){
+            whiteIpList=new HashSet<>();
+        }
+        blackIpList=ipListCache.getBlackIpList();
+        if(blackIpList==null){
+            blackIpList=new HashSet<>();
+        }
+    }
+    private void initHandler(){
         handler=new Handler(new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
@@ -48,13 +75,17 @@ public class  GenerateProxyActivity extends Activity {
                     case GENERATE_PROXY:
                         generate_text.setText("代理数量："+NetConfig.servers.size());
                         check.setEnabled(true);
+                        if(vipButton.isChecked()){
+                            generate.setEnabled(false);
+                        }
                         break;
                     case UPDATE_VALIDIP_PROXY:
                         check_text.setText("有效代理：" + NetConfig.validIps.size());
                         if(NetConfig.validIps.size()>0){
                             start.setEnabled(true);
                         }
-                        log.append(msg.obj.toString());
+                        String htmlStr = "<font color=\"#ff0000\">"+msg.obj.toString()+"</font><br>";
+                        log.append(Html.fromHtml(htmlStr));
                         break;
                     case UPDATE_LOG:
                         log.append(msg.obj.toString());
@@ -69,7 +100,8 @@ public class  GenerateProxyActivity extends Activity {
                 return true;
             }
         });
-
+    }
+    private void initView(){
         generate= (Button) findViewById(R.id.generate);
         check= (Button) findViewById(R.id.check);
         start= (Button) findViewById(R.id.start);
@@ -78,8 +110,27 @@ public class  GenerateProxyActivity extends Activity {
         generate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                generate_click_count++;
-                generateProxys(generate_click_count);
+                if(!isDebug){
+                    if(vipButton.isChecked()){
+                        generateVIPProxys();
+                    }else{
+                        generate_click_count++;
+                        generateProxys(generate_click_count);
+                    }
+                }else{
+                    /*测试vip花刺代理*/
+                    NetConfig.servers.add(new Server("111.203.244.4","8081"));
+                    NetConfig.servers.add(new Server("119.188.115.26","8080"));
+                    NetConfig.servers.add(new Server("101.226.249.237","80"));
+                    NetConfig.servers.add(new Server("180.166.112.47","8888"));
+                    NetConfig.servers.add(new Server("180.97.29.57","80"));
+                    NetConfig.servers.add(new Server("218.94.25.141","8081"));
+                    NetConfig.servers.add(new Server("111.202.71.60","8080"));
+                    NetConfig.servers.add(new Server("183.131.76.27","8888"));
+
+                    handler.sendEmptyMessage(GENERATE_PROXY);
+                }
+
             }
         });
         check.setOnClickListener(new View.OnClickListener() {
@@ -89,29 +140,29 @@ public class  GenerateProxyActivity extends Activity {
                     @Override
                     public void run() {
                         for (Server server : NetConfig.servers) {
-                            if(isInterrupted){
+                            if (isInterrupted) {
                                 break;
                             }
-                            Message msg=new Message();
+                            Message msg = new Message();
                             if (isValidIP(server.ip, server.port)) {
                                 Log.i("ly", "valid ip-->" + server.ip);
                                 NetConfig.validIps.add(server);
 
-                                msg.what=UPDATE_VALIDIP_PROXY;
-                                msg.obj="valid ip-->" + server.ip+"\n";
+                                msg.what = UPDATE_VALIDIP_PROXY;
+                                msg.obj = "valid ip-->" + server.ip + "\n";
 
                                 //if(NetConfig.validIps.size()>1)break;
                             } else {
                                 Log.i("ly", "bad ip-->" + server.ip);
                                 NetConfig.badIps.add(server);
 
-                                msg.what=UPDATE_LOG;
-                                msg.obj="bad ip-->" + server.ip+"\n";
+                                msg.what = UPDATE_LOG;
+                                msg.obj = "bad ip-->" + server.ip + "\n";
 
                             }
                             handler.sendMessage(msg);
                         }
-                        if(!isInterrupted)handler.sendEmptyMessage(CHECK_FINISH);
+                        if (!isInterrupted) handler.sendEmptyMessage(CHECK_FINISH);
                     }
                 }.start();
 
@@ -125,14 +176,69 @@ public class  GenerateProxyActivity extends Activity {
             }
         });
         start.setEnabled(false);
+
+        speedUpButton= (RadioButton) findViewById(R.id.speedup);
+        vipButton=(RadioButton) findViewById(R.id.vip);
+
         log= (TextView) findViewById(R.id.log);
     }
     private void lauchMain(){
+        if(NetConfig.validIps.size()==0){
+            Toast.makeText(this,"未生成有效代理",Toast.LENGTH_SHORT).show();
+            return;
+        }
         ProxySetting.cancelProxy();
         isInterrupted=true;
         Intent it=new Intent(GenerateProxyActivity.this,MainActivity.class);
         startActivity(it);
         finish();
+    }
+    private  void generateVIPProxys(){
+        new Thread(){
+            public void run() {
+                HttpGet get=new HttpGet(NetConfig.VIPURL_GETPROXY);
+                get.setHeader("Cache-Control", "no-cache");
+                get.setHeader("User-Agent", NetConfig.agent);
+
+                HttpParams params = new BasicHttpParams();
+                HttpConnectionParams.setConnectionTimeout(params, TIME_OUT); //设置连接超时
+                HttpConnectionParams.setSoTimeout(params, TIME_OUT); //设置请求超时
+                get.setParams(params);
+
+                HttpClient hClient = null;
+
+                try {
+
+                    hClient=new DefaultHttpClient();
+                    HttpResponse hResponse=hClient.execute(get);
+                    if(hResponse.getStatusLine().getStatusCode()==200){
+
+                        BufferedReader br = new BufferedReader(new InputStreamReader(hResponse.getEntity().getContent(),"utf-8"));
+                        StringBuilder sbBuilder=new StringBuilder();
+                        String line = null;
+
+                        while ((line = br.readLine()) != null){
+                            sbBuilder.append(line + "\n");
+                            if(line.contains(":")){
+                                int index=line.indexOf(":");
+                                String ip=line.substring(0, index);
+                                String port=line.substring(index+1);
+                                NetConfig.servers.add(new Server(ip, port));
+                            }
+
+                        }
+                        br.close();
+
+                        handler.sendEmptyMessage(GENERATE_PROXY);
+                    }else{
+                        Log.e("ly", "err, get servers from local");
+                    }
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            };
+        }.start();
     }
     private void generateProxys(final int click_count){
         final int page=click_count;
@@ -184,7 +290,18 @@ public class  GenerateProxyActivity extends Activity {
             };
         }.start();
     }
-    private boolean isValidIP(String ip,String port){
+    private boolean isValidIP(final String ip,String port){
+        if(speedUpButton.isChecked()){
+            if(whiteIpList.contains(ip)){
+                Log.i("ly","in white list");
+                return true;
+            }else if(blackIpList.contains(ip)){
+                Log.i("ly","in black list");
+                return false;
+            }else{
+                /*新ip，重新检测*/
+            }
+        }
         HttpGet get=new HttpGet(NetConfig.home);
         get.setHeader("User-Agent", NetConfig.agent);
         get.setHeader("Cache-Control", "no-cache");
@@ -204,14 +321,20 @@ public class  GenerateProxyActivity extends Activity {
             hClient=new DefaultHttpClient();
             HttpResponse  hResponse=hClient.execute(get);
             if(hResponse.getStatusLine().getStatusCode()==200){
+                whiteIpList.add(ip);
+                Log.i("ly","add white list");
                 return true;
             }else{
+                blackIpList.add(ip);
+                Log.i("ly", "add black list");
                 return false;
             }
 
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+            blackIpList.add(ip);
+            Log.i("ly", "add black list");
             return false;
         }
     }
@@ -224,5 +347,17 @@ public class  GenerateProxyActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         isInterrupted =true;
         ProxySetting.cancelProxy();
+        ipListCache.saveBlackIpList(blackIpList);
+        ipListCache.saveWhiteIpList(whiteIpList);
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+
+        NetConfig.servers.clear();
+        NetConfig.validIps.clear();
+        NetConfig.badIps.clear();
+        NetConfig.validIpIndex =0;
     }
 }
