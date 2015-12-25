@@ -48,14 +48,19 @@ public class TestActivity extends Activity {
             @Override
             public void onClick(View v) {
                 configWebview(web, NetConfig.validIps.get(index).ip, Integer.parseInt(NetConfig.validIps.get(index).port));
-                index++;
+                Log.i("ly", "ip-->" + NetConfig.validIps.get(index).ip);
                 if(index%2==0){
                     web.loadUrl("http://wap.baidu.com");
                 }else{
                     web.loadUrl("http://m.chinaso.com");
                 }
 
-                Log.i("ly","ip-->"+NetConfig.validIps.get(index).ip);
+                index++;
+                if(index==NetConfig.validIps.size()){
+                    Toast.makeText(TestActivity.this,"代理已用完",Toast.LENGTH_SHORT).show();
+                    index=0;
+                }
+
             }
         });
 

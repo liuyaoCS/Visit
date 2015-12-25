@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 public class  GenerateProxyActivity extends Activity {
     Button generate,check,start,clearCache;
     TextView generate_text,check_text,log;
-    RadioButton manul,vip;
+    RadioButton manual,vip;
     RadioButton socket,filter;
 
     private Handler handler;
@@ -90,7 +90,7 @@ public class  GenerateProxyActivity extends Activity {
                     case GENERATE_PROXY:
                         generate_text.setText("代理数量："+NetConfig.servers.size());
                         check.setEnabled(true);
-                        if(vip.isChecked() || manul.isChecked()){
+                        if(vip.isChecked() || manual.isChecked()){
                             generate.setEnabled(false);
                         }
                         break;
@@ -125,7 +125,7 @@ public class  GenerateProxyActivity extends Activity {
         generate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(manul.isChecked()){
+                if(manual.isChecked()){
                     generateManualProxys();
                 }else if(vip.isChecked()){
                     generateVIPProxys();
@@ -157,7 +157,7 @@ public class  GenerateProxyActivity extends Activity {
         start.setEnabled(false);
 
 
-        manul= (RadioButton) findViewById(R.id.manual);
+        manual = (RadioButton) findViewById(R.id.manual);
         vip= (RadioButton) findViewById(R.id.vip);
         filter = (RadioButton) findViewById(R.id.check_filter);
         socket=(RadioButton) findViewById(R.id.check_socket);
