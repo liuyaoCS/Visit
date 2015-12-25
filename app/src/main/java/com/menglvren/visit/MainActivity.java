@@ -89,9 +89,9 @@ public class MainActivity extends Activity {
                 super.onPageFinished(view, url);
                 Log.i("ly", "mainWeb status-->finish url:" + url);
 
-                if(!isJSInserted){
+                if (!isJSInserted) {
                     view.loadUrl("javascript:" + jsAction());
-                    isJSInserted=true;
+                    isJSInserted = true;
                 }
             }
         });

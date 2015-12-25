@@ -22,19 +22,29 @@
             android:paddingTop="10dp"
             android:text="代理数量："
             />
-        <RadioButton
+        <RadioGroup
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/vip"
-            android:layout_marginRight="20dp"
-            android:layout_alignParentRight="true"/>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="vip"
-            android:layout_alignBaseline="@id/vip"
-            android:layout_marginRight="5dp"
-            android:layout_toLeftOf="@id/vip"/>
+            android:id="@+id/mode"
+            android:orientation="horizontal"
+            android:layout_marginRight="30dp"
+            android:layout_alignParentRight="true">
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/manual"
+                android:text="手动"
+                android:visibility="gone"
+                />
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/vip"
+                android:text=" VIP  "
+                />
+        </RadioGroup>
+
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -51,27 +61,36 @@
             android:layout_below="@id/generate"
             android:text="有效代理："
             />
-        <RadioButton
+        <RadioGroup
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/speedup"
+            android:orientation="horizontal"
             android:layout_below="@id/generate"
             android:layout_marginRight="20dp"
-            android:layout_alignParentRight="true"/>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="加速"
-            android:layout_alignBaseline="@id/speedup"
-            android:layout_below="@id/generate"
-            android:layout_marginRight="5dp"
-            android:layout_toLeftOf="@id/speedup"/>
+            android:layout_alignParentRight="true">
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/check_socket"
+                android:text="socket"
+               />
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/check_filter"
+                android:text="过滤"
+                android:visibility="gone"
+                />
+        </RadioGroup>
+
+
         <Button
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="启动"
             android:id="@+id/start"
             android:layout_below="@id/check"/>
+
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -82,6 +101,16 @@
                 android:id="@+id/log"
                 />
         </ScrollView>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/clear_cache"
+            android:text="清除缓存"
+            android:layout_alignParentRight="true"
+            android:layout_marginRight="15dp"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="15dp"
+            />
 
     </RelativeLayout>
 
