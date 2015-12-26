@@ -145,8 +145,8 @@ public class MainActivity extends Activity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
 
-                Log.i("ly", "newWeb status-->start url:" + url+" title->"+view.getTitle()+" icon->"+favicon);
-                if(!isValid(view.getTitle(),url)){
+                Log.i("ly", "newWeb status-->start url:" + url + " title->" + view.getTitle() + " icon->" + favicon);
+                if (!isValid(view.getTitle(), url)) {
                     removeCurrentProxy();
                     //view.stopLoading();
                     return;
@@ -157,7 +157,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                Log.i("ly", "newWeb status-->finish url:" + url + " title-->" + view.getTitle()+" icon->"+view.getFavicon());
+                Log.i("ly", "newWeb status-->finish url:" + url + " title-->" + view.getTitle() + " icon->" + view.getFavicon());
                 handler.sendEmptyMessageDelayed(EVENT_SIMULATE_CLICK, DELAY_PLAY);
             }
 
@@ -186,7 +186,7 @@ public class MainActivity extends Activity {
         Server errServer=new Server(ip,port);
         if(NetConfig.validIps.contains(errServer)) {
             NetConfig.validIps.remove(errServer);
-            NetConfig.validIpIndex=(NetConfig.validIpIndex-1+NetConfig.validIpIndex)%NetConfig.validIps.size();
+            NetConfig.validIpIndex=(NetConfig.validIpIndex-1+NetConfig.validIps.size())%NetConfig.validIps.size();
             Log.i("ly", "remove ip-->" + ip + " from validIps");
         }
     }

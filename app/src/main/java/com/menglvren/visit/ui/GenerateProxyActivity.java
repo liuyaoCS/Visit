@@ -157,8 +157,7 @@ public class  GenerateProxyActivity extends Activity {
                 }else if(vip.isChecked()){
                     generateVIPProxys();
                 }else{
-                    generate_click_count++;
-                    generateProxys(generate_click_count);
+                    generateProxys(generate_click_count++);
                 }
             }
         });
