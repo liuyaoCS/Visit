@@ -1,4 +1,4 @@
-package com.menglvren.visit;
+package com.menglvren.visit.ui;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
@@ -12,16 +12,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
+import com.menglvren.visit.NetConfig;
+import com.menglvren.visit.R;
+import com.menglvren.visit.util.ProxySetting;
 
 
 public class TestActivity extends Activity {
@@ -71,7 +66,7 @@ public class TestActivity extends Activity {
     }
     private void configWebview(WebView web,String ip,int port){
         if(Build.VERSION.SDK_INT== Build.VERSION_CODES.KITKAT){
-            ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(),ip,port);
+            ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(), ip, port);
         }else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN
                 && Build.VERSION.SDK_INT<Build.VERSION_CODES.KITKAT){
             ProxySetting.setProxyICSPlus(web,ip,port,"");

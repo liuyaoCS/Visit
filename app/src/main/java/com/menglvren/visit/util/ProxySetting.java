@@ -1,4 +1,4 @@
-package com.menglvren.visit;
+package com.menglvren.visit.util;
 
 import android.content.Context;
 import android.content.Intent;

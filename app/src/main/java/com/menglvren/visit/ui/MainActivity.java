@@ -1,4 +1,4 @@
-package com.menglvren.visit;
+package com.menglvren.visit.ui;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
@@ -16,6 +16,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+
+import com.menglvren.visit.NetConfig;
+import com.menglvren.visit.R;
+import com.menglvren.visit.model.Server;
+import com.menglvren.visit.util.ProxySetting;
 
 /***
  * 每10s刷一个节目：载入节目页面后，3.5秒点击，点击耗时0.5秒，6秒播放
@@ -147,12 +152,18 @@ public class MainActivity extends Activity {
 
                 handler.sendEmptyMessageDelayed(EVENT_SIMULATE_CLICK, DELAY_PLAY);
             }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                Log.i("ly", "newWeb status-->error:" + description);
+            }
         });
 
     }
     private void configProxy(WebView web,String ip,int port){
         if(Build.VERSION.SDK_INT== Build.VERSION_CODES.KITKAT){
-            ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(),ip,port);
+            ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(), ip, port);
             //ProxySetting.clearKitKatWebViewProxy(web.getContext().getApplicationContext());
         }else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN
                 && Build.VERSION.SDK_INT<Build.VERSION_CODES.KITKAT){

@@ -1,14 +1,15 @@
 package com.menglvren.visit;
+import com.menglvren.visit.model.Server;
+
 import java.util.ArrayList;
-import java.util.HashSet;
 
 public class NetConfig {
 
-	public  static boolean isDebug=true;
+	public  static boolean isDebug=false;
 
 	public static final String URL_GETPROXY="http://www.xicidaili.com/nn/";
 	public static final String VIPURL_GETPROXY ="http://xvre.daili666api.com/ip/?" +
-			"tid=559484726216210&num=10&category=2&exclude_ports=8088&filter=on";
+			"tid=559484726216210&num=10&delay=1&category=2&foreign=none&filter=on";
 	public static String[] manualProxys=new String[]{
 			"111.203.244.4:8081",
 			"117.136.234.9:81",
@@ -32,11 +33,3 @@ public class NetConfig {
 
 }
 
-class Server{
-	public String ip;
-	public String port;
-	public Server(String i,String p){
-		ip=i;
-		port=p;
-	}
-}

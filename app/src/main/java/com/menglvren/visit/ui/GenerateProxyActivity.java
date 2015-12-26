@@ -1,4 +1,4 @@
-package com.menglvren.visit;
+package com.menglvren.visit.ui;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -12,6 +12,14 @@ import android.widget.Button;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.menglvren.visit.NetConfig;
+import com.menglvren.visit.R;
+import com.menglvren.visit.model.IpListCache;
+import com.menglvren.visit.model.Server;
+import com.menglvren.visit.model.VipListCache;
+import com.menglvren.visit.util.DataCleanManager;
+import com.menglvren.visit.util.ProxySetting;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -28,6 +36,7 @@ import java.net.Socket;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,21 +47,29 @@ public class  GenerateProxyActivity extends Activity {
     RadioButton socket,filter;
 
     private Handler handler;
+    private int mStatus=-1;
     private static final int GENERATE_PROXY=0;
-    private static final int UPDATE_VALIDIP_PROXY=1;
+    private static final int CHECK_UPDATE=1;
     private static final int CHECK_FINISH=2;
-    private static final int UPDATE_LOG=3;
+    private final int MSG_ARG_UPDATE_VALID=0;
+    private final int MSG_ARG_UPDATE_INVALID=1;
+
+    private final int TIME_OUT=1*1000;
+    private final int VIP_VALID_MAX=100;
 
     private int generate_click_count=0;
-    private final int TIME_OUT=1*1000;
-
+    private boolean isLocalVipLoaded=false;
     private boolean isInterrupted =false;
+    private String currentSize;
+
     ExecutorService service= Executors.newFixedThreadPool(10);
+    private AtomicInteger mCurrentCheckCount=new AtomicInteger(0);
 
     IpListCache ipListCache;
     HashSet<String> whiteIpList,blackIpList;
+    VipListCache vipListCache;
+    HashSet<Server> vipList;
 
-    private String currentSize;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,7 +79,6 @@ public class  GenerateProxyActivity extends Activity {
         initIpCache();
         initHandler();
         initView();
-
     }
 
     private void initServer(){
@@ -81,6 +97,12 @@ public class  GenerateProxyActivity extends Activity {
         if(blackIpList==null){
             blackIpList=new HashSet<>();
         }
+
+        vipListCache=new VipListCache(this);
+        vipList=vipListCache.getVipList();
+        if(vipList==null){
+            vipList=new HashSet<>();
+        }
     }
     private void initHandler(){
         handler=new Handler(new Handler.Callback() {
@@ -88,24 +110,28 @@ public class  GenerateProxyActivity extends Activity {
             public boolean handleMessage(Message msg) {
                 switch (msg.what){
                     case GENERATE_PROXY:
+                        mStatus=GENERATE_PROXY;
                         generate_text.setText("代理数量："+NetConfig.servers.size());
                         check.setEnabled(true);
-                        if(vip.isChecked() || manual.isChecked()){
+                        if((vip.isChecked() || manual.isChecked()) && NetConfig.validIps.size()>=VIP_VALID_MAX){
                             generate.setEnabled(false);
                         }
                         break;
-                    case UPDATE_VALIDIP_PROXY:
-                        check_text.setText("有效代理：" + NetConfig.validIps.size());
-                        if(NetConfig.validIps.size()>0){
-                            start.setEnabled(true);
+                    case CHECK_UPDATE:
+                        mStatus=CHECK_UPDATE;
+                        if(msg.arg1==MSG_ARG_UPDATE_VALID){
+                            check_text.setText("有效代理：" + NetConfig.validIps.size());
+                            if(NetConfig.validIps.size()>0){
+                                start.setEnabled(true);
+                            }
+                            String htmlStr = "<font color=\"#ff0000\">"+msg.obj.toString()+"</font><br>";
+                            log.append(Html.fromHtml(htmlStr));
+                        }else{
+                            log.append(msg.obj.toString());
                         }
-                        String htmlStr = "<font color=\"#ff0000\">"+msg.obj.toString()+"</font><br>";
-                        log.append(Html.fromHtml(htmlStr));
-                        break;
-                    case UPDATE_LOG:
-                        log.append(msg.obj.toString());
                         break;
                     case CHECK_FINISH:
+                        mStatus=CHECK_FINISH;
                         check_text.setText("有效代理："+NetConfig.validIps.size()+" done!");
                         launchMain();
                         break;
@@ -138,13 +164,13 @@ public class  GenerateProxyActivity extends Activity {
         check.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-               if(socket.isChecked()){
+                check.setEnabled(false);
+                generate.setEnabled(false);
+                if(socket.isChecked()){
                    checkProxysBySocket();
-               }else {
+                }else{
                    checkProxys();
-               }
-
+                }
             }
         });
         check.setEnabled(false);
@@ -156,12 +182,10 @@ public class  GenerateProxyActivity extends Activity {
         });
         start.setEnabled(false);
 
-
         manual = (RadioButton) findViewById(R.id.manual);
         vip= (RadioButton) findViewById(R.id.vip);
         filter = (RadioButton) findViewById(R.id.check_filter);
         socket=(RadioButton) findViewById(R.id.check_socket);
-
 
         log= (TextView) findViewById(R.id.log);
 
@@ -177,7 +201,9 @@ public class  GenerateProxyActivity extends Activity {
                 if(whiteIpList!=null){
                     whiteIpList.clear();
                 }
-
+                if(vipList!=null){
+                    vipList.clear();
+                }
                 DataCleanManager.cleanInternalCache(GenerateProxyActivity.this);
                 currentSize = DataCleanManager.getTotalCacheSize(GenerateProxyActivity.this);
                 Toast.makeText(GenerateProxyActivity.this, "缓存已清除", Toast.LENGTH_SHORT).show();
@@ -186,16 +212,22 @@ public class  GenerateProxyActivity extends Activity {
         });
     }
     private void checkProxysByPing(){
+        NetConfig.validIps.clear();
+        NetConfig.badIps.clear();
         for (Server server : NetConfig.servers){
             service.submit(new PingTask(server));
         }
     }
     private void checkProxysBySocket(){
+        NetConfig.validIps.clear();
+        NetConfig.badIps.clear();
         for (Server server : NetConfig.servers){
             service.submit(new SocketTask(server));
         }
     }
     private void checkProxys(){
+        NetConfig.validIps.clear();
+        NetConfig.badIps.clear();
         new Thread() {
             @Override
             public void run() {
@@ -204,21 +236,19 @@ public class  GenerateProxyActivity extends Activity {
                         break;
                     }
                     Message msg = new Message();
+                    msg.what=CHECK_UPDATE;
                     if (isValidIP(server.ip, server.port)) {
                         Log.i("ly", "valid ip-->" + server.ip);
                         NetConfig.validIps.add(server);
 
-                        msg.what = UPDATE_VALIDIP_PROXY;
+                        msg.arg1=MSG_ARG_UPDATE_VALID;
                         msg.obj = "valid ip-->" + server.ip + "\n";
-
-                        //if(NetConfig.validIps.size()>1)break;
                     } else {
                         Log.i("ly", "bad ip-->" + server.ip);
                         NetConfig.badIps.add(server);
 
-                        msg.what = UPDATE_LOG;
+                        msg.arg1=MSG_ARG_UPDATE_INVALID;
                         msg.obj = "bad ip-->" + server.ip + "\n";
-
                     }
                     handler.sendMessage(msg);
                 }
@@ -238,6 +268,14 @@ public class  GenerateProxyActivity extends Activity {
         handler.sendEmptyMessage(GENERATE_PROXY);
     }
     private  void generateVIPProxys(){
+        if(!isLocalVipLoaded){
+            Log.i("ly","load local vip proxy");
+            isLocalVipLoaded=true;
+            NetConfig.servers.addAll(vipList);
+            vipList.clear();
+            handler.sendEmptyMessage(GENERATE_PROXY);
+            return;
+        }
         new Thread(){
             public void run() {
                 HttpGet get=new HttpGet(NetConfig.VIPURL_GETPROXY);
@@ -384,20 +422,27 @@ public class  GenerateProxyActivity extends Activity {
             hClient=new DefaultHttpClient();
             HttpResponse  hResponse=hClient.execute(get);
             if(hResponse.getStatusLine().getStatusCode()==200){
-                whiteIpList.add(ip);
-                Log.i("ly","add white list");
+                if(filter.isChecked()){
+                    whiteIpList.add(ip);
+                    Log.i("ly", "add white list");
+                }
                 return true;
             }else{
-                blackIpList.add(ip);
-                Log.i("ly", "add black list");
+                if(filter.isChecked()){
+                    blackIpList.add(ip);
+                    Log.i("ly", "add black list");
+                }
+
                 return false;
             }
 
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            blackIpList.add(ip);
-            Log.i("ly", "add black list");
+            if(filter.isChecked()){
+                blackIpList.add(ip);
+                Log.i("ly", "add black list");
+            }
             return false;
         }
     }
@@ -423,8 +468,16 @@ public class  GenerateProxyActivity extends Activity {
 
         ProxySetting.cancelProxy();
 
-        ipListCache.saveBlackIpList(blackIpList);
-        ipListCache.saveWhiteIpList(whiteIpList);
+        if(filter.isChecked()){
+            ipListCache.saveBlackIpList(blackIpList);
+            ipListCache.saveWhiteIpList(whiteIpList);
+        }
+        if (vip.isChecked() && mStatus==CHECK_FINISH){
+            HashSet<Server> temp=new HashSet<>();
+            temp.addAll(NetConfig.validIps);
+            vipListCache.saveVipList(temp);
+            temp.clear();
+        }
 
         finish();
         Log.i("ly", "finish");
@@ -437,6 +490,7 @@ public class  GenerateProxyActivity extends Activity {
         @Override
         public void run() {
             Message msg = new Message();
+            msg.what = CHECK_UPDATE;
             try
             {
                 Process p = Runtime.getRuntime().exec(
@@ -448,7 +502,7 @@ public class  GenerateProxyActivity extends Activity {
                     Log.i("ly", "valid ip-->" + mServer.ip);
                     NetConfig.validIps.add(mServer);
 
-                    msg.what = UPDATE_VALIDIP_PROXY;
+                    msg.arg1=MSG_ARG_UPDATE_VALID;
                     msg.obj = "ping valid ip-->" + mServer.ip + "\n";
 
                 } else
@@ -456,7 +510,7 @@ public class  GenerateProxyActivity extends Activity {
                     Log.i("ly", "bad ip-->" + mServer.ip+" status:"+status);
                     NetConfig.badIps.add(mServer);
 
-                    msg.what = UPDATE_LOG;
+                    msg.arg1=MSG_ARG_UPDATE_INVALID;
                     msg.obj = "ping bad ip-->" + mServer.ip + "\n";
                 }
 
@@ -466,13 +520,10 @@ public class  GenerateProxyActivity extends Activity {
                 Log.i("ly", "bad ip-->" + mServer.ip);
                 NetConfig.badIps.add(mServer);
 
-                msg.what = UPDATE_LOG;
+                msg.arg1=MSG_ARG_UPDATE_INVALID;
                 msg.obj = "exception bad ip-->" + mServer.ip + "\n";
             }finally {
                 handler.sendMessage(msg);
-                if(NetConfig.validIps.size()+NetConfig.badIps.size()==NetConfig.servers.size()){
-                    handler.sendEmptyMessage(CHECK_FINISH);
-                }
             }
         }
     }
@@ -484,27 +535,29 @@ public class  GenerateProxyActivity extends Activity {
         @Override
         public void run() {
             Message msg = new Message();
-
+            msg.what=CHECK_UPDATE;
 
             if (isValidIPBySocket(mServer.ip,mServer.port))
             {
                 Log.i("ly", "valid ip-->" + mServer.ip);
                 NetConfig.validIps.add(mServer);
-
-                msg.what = UPDATE_VALIDIP_PROXY;
+                if(vip.isChecked()){
+                    vipList.add(mServer);
+                }
+                msg.arg1=MSG_ARG_UPDATE_VALID;
                 msg.obj = "socket valid ip-->" + mServer.ip + "\n";
 
-            } else
-            {
-                Log.i("ly", "bad ip-->" + mServer.ip+" status:");
+            } else {
+                Log.i("ly", "bad ip-->" + mServer.ip);
                 NetConfig.badIps.add(mServer);
 
-                msg.what = UPDATE_LOG;
+                msg.arg1=MSG_ARG_UPDATE_INVALID;
                 msg.obj = "socket bad ip-->" + mServer.ip + "\n";
             }
             handler.sendMessage(msg);
-            if(NetConfig.validIps.size()+NetConfig.badIps.size()==NetConfig.servers.size()){
-                handler.sendEmptyMessage(CHECK_FINISH);
+
+            if (mCurrentCheckCount.incrementAndGet()==NetConfig.servers.size()){
+               handler.sendEmptyMessage(CHECK_FINISH);
             }
 
         }

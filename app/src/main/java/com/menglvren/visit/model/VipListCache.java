@@ -1,8 +1,7 @@
-package com.menglvren.visit;
+package com.menglvren.visit.model;
 
-/**
- * Created by Administrator on 2015/12/24 0024.
- */
+import android.content.Context;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -13,40 +12,31 @@ import java.io.ObjectOutputStream;
 import java.io.StreamCorruptedException;
 import java.util.HashSet;
 
-import android.content.Context;
-
-
-public class IpListCache {
+/**
+ * Created by ly on 2015/12/25.
+ */
+public class VipListCache {
     private Context context;
 
-    public IpListCache(Context _context){
+    public VipListCache(Context _context){
         this.context = _context;
     }
 
-    public void saveWhiteIpList(HashSet<String> datas){
-        write(getWhiteIpListCacheFilePath(),datas);
-    }
-    public void saveBlackIpList(HashSet<String> datas){
-        write(getBlackIpListCacheFilePath(),datas);
+    public void saveVipList(HashSet<Server> datas){
+        write(getVipListCacheFilePath(),datas);
     }
 
-    public HashSet<String> getWhiteIpList(){
-        return read(getWhiteIpListCacheFilePath());
-    }
-    public HashSet<String> getBlackIpList(){
-        return read(getBlackIpListCacheFilePath());
+    public HashSet<Server> getVipList(){
+        return read(getVipListCacheFilePath());
     }
 
-    private String getWhiteIpListCacheFilePath() {
+    private String getVipListCacheFilePath() {
         return context.getCacheDir().getPath() + File.separator
-                + "whiteIpList";
-    }
-    private String getBlackIpListCacheFilePath() {
-        return context.getCacheDir().getPath() + File.separator
-                + "blackIpList";
+                + "vipList";
     }
 
-    private void write(String fileName, HashSet<String> _datas){
+
+    private void write(String fileName, HashSet<Server> _datas){
         if (_datas == null) {
             return;
         }
@@ -72,13 +62,13 @@ public class IpListCache {
     }
 
     @SuppressWarnings("unchecked")
-    private HashSet<String> read(String fileName){
-        HashSet<String> datas = null;
+    private HashSet<Server> read(String fileName){
+        HashSet<Server> datas = null;
         ObjectInputStream ois = null;
         try {
             ois = new ObjectInputStream(new FileInputStream(fileName));
-            datas = new HashSet<String>();
-            datas = (HashSet<String>)ois.readObject();
+            datas = new HashSet<Server>();
+            datas = (HashSet<Server>)ois.readObject();
         } catch (ClassNotFoundException e){
             e.printStackTrace();
         } catch (StreamCorruptedException e) {
@@ -99,4 +89,3 @@ public class IpListCache {
         return datas;
     }
 }
-
