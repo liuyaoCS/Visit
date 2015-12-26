@@ -19,8 +19,11 @@ import android.widget.Toast;
 
 import com.menglvren.visit.NetConfig;
 import com.menglvren.visit.R;
+import com.menglvren.visit.model.IpListCache;
 import com.menglvren.visit.model.Server;
 import com.menglvren.visit.util.ProxySetting;
+
+import java.util.HashSet;
 
 /***
  * 每10s刷一个节目：载入节目页面后，3.5秒点击，点击耗时0.5秒，6秒播放
@@ -37,9 +40,6 @@ public class MainActivity extends Activity {
 
     boolean isJSInserted=false;
 
-    private String mIp;
-    private int mPort;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,9 +55,11 @@ public class MainActivity extends Activity {
                     case EVENT_CHANGE_PROXY:
                         Server server = NetConfig.validIps.get(NetConfig.validIpIndex);
                         NetConfig.validIpIndex = (NetConfig.validIpIndex + 1) % NetConfig.validIps.size();
-                        Log.i("ly", "mainWeb status-->config proxy ip=" + server.ip);
+                        Log.i("ly", "mainWeb status-->config proxy " + server.ip+":"+server.port);
                         configProxy(newWeb, server.ip, Integer.parseInt(server.port));
-
+                        if(NetConfig.validIpIndex==0){
+                            Toast.makeText(MainActivity.this,"代理已用完",Toast.LENGTH_SHORT).show();
+                        }
                         break;
                     default:
                         break;
@@ -138,18 +140,24 @@ public class MainActivity extends Activity {
         newWeb.getSettings().setJavaScriptEnabled(true);
         newWeb.getSettings().setAppCacheEnabled(false);
         newWeb.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+        newWeb.getSettings().setUserAgentString(NetConfig.agent);
         newWeb.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
+
+                Log.i("ly", "newWeb status-->start url:" + url+" title->"+view.getTitle()+" icon->"+favicon);
+                if(!isValid(view.getTitle(),url)){
+                    removeCurrentProxy();
+                    //view.stopLoading();
+                    return;
+                }
                 super.onPageStarted(view, url, favicon);
-                Log.i("ly", "newWeb status-->start url:" + url);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                Log.i("ly", "newWeb status-->finish url:" + url);
-
+                Log.i("ly", "newWeb status-->finish url:" + url + " title-->" + view.getTitle()+" icon->"+view.getFavicon());
                 handler.sendEmptyMessageDelayed(EVENT_SIMULATE_CLICK, DELAY_PLAY);
             }
 
@@ -157,14 +165,34 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
                 Log.i("ly", "newWeb status-->error:" + description);
+
             }
         });
 
     }
+    private boolean isValid(String title,String url){
+        if(title.contains("找不到网页")
+            || title.contains("403")
+            || title.contains("ERROR")
+            || url.contains("404")){
+            return false;
+        }
+        return true;
+    }
+
+    private void removeCurrentProxy(){
+        String ip=System.getProperty("http.proxyHost");
+        String port=System.getProperty("http.proxyPort");
+        Server errServer=new Server(ip,port);
+        if(NetConfig.validIps.contains(errServer)) {
+            NetConfig.validIps.remove(errServer);
+            NetConfig.validIpIndex=(NetConfig.validIpIndex-1+NetConfig.validIpIndex)%NetConfig.validIps.size();
+            Log.i("ly", "remove ip-->" + ip + " from validIps");
+        }
+    }
     private void configProxy(WebView web,String ip,int port){
         if(Build.VERSION.SDK_INT== Build.VERSION_CODES.KITKAT){
             ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(), ip, port);
-            //ProxySetting.clearKitKatWebViewProxy(web.getContext().getApplicationContext());
         }else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN
                 && Build.VERSION.SDK_INT<Build.VERSION_CODES.KITKAT){
             ProxySetting.setProxyICSPlus(web,ip,port,"");
@@ -186,7 +214,7 @@ public class MainActivity extends Activity {
                     "window.proxy.changeProxy();"+
                     "clickItems(i);" +
                     "var len=document.getElementsByClassName(\"v-link\").length;" +
-                    "setTimeout(\"task()\",10000*2);" +
+                    "setTimeout(\"task()\",10000*len);" +
                 "};" +
                 "function clickItems(i){" +
                     "var collection=document.getElementsByClassName(\"v-link\");" +
@@ -220,11 +248,16 @@ public class MainActivity extends Activity {
         mainWeb.destroy();
         newWeb.destroy();
         ProxySetting.cancelProxy();
-        //ProxySetting.clearKitKatWebViewProxy(getApplicationContext());
+
+        IpListCache ipListCache=new IpListCache(MainActivity.this);
+        HashSet<Server> temp=new HashSet<>();
+        temp.addAll(NetConfig.validIps);
+        ipListCache.saveIpList(temp);
         NetConfig.servers.clear();
         NetConfig.validIps.clear();
         NetConfig.badIps.clear();
         NetConfig.validIpIndex =0;
+
         System.exit(0);
     }
 }

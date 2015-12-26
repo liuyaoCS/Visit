@@ -1,4 +1,4 @@
-package com.menglvren.visit.ui;
+package com.menglvren.visit.test;
 
 import android.app.Activity;
 import android.graphics.Bitmap;

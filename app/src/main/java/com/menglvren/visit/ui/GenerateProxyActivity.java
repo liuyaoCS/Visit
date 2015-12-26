@@ -18,6 +18,7 @@ import com.menglvren.visit.R;
 import com.menglvren.visit.model.IpListCache;
 import com.menglvren.visit.model.Server;
 import com.menglvren.visit.model.VipListCache;
+import com.menglvren.visit.test.TestActivity;
 import com.menglvren.visit.util.DataCleanManager;
 import com.menglvren.visit.util.ProxySetting;
 
@@ -54,11 +55,13 @@ public class  GenerateProxyActivity extends Activity {
     private final int MSG_ARG_UPDATE_VALID=0;
     private final int MSG_ARG_UPDATE_INVALID=1;
 
-    private final int TIME_OUT=1*1000;
-    private final int VIP_VALID_MAX=100;
+    private final int GET_PROXYS_TIME_OUT =2*1000;
+    private final int CHECK_PROXYS_TIME_OUT =1*1000;
+    //private final int VIP_VALID_MAX=100;
 
     private int generate_click_count=0;
     private boolean isLocalVipLoaded=false;
+    private boolean isLocalIpLoaded=false;
     private boolean isInterrupted =false;
     private String currentSize;
 
@@ -66,7 +69,7 @@ public class  GenerateProxyActivity extends Activity {
     private AtomicInteger mCurrentCheckCount=new AtomicInteger(0);
 
     IpListCache ipListCache;
-    HashSet<String> whiteIpList,blackIpList;
+    HashSet<Server> ipList;
     VipListCache vipListCache;
     HashSet<Server> vipList;
 
@@ -79,6 +82,11 @@ public class  GenerateProxyActivity extends Activity {
         initIpCache();
         initHandler();
         initView();
+        test();
+    }
+    private void test(){
+        //TestUnit.showHTMLPage(GenerateProxyActivity.this);
+        //TestUnit.testContain();
     }
 
     private void initServer(){
@@ -89,13 +97,9 @@ public class  GenerateProxyActivity extends Activity {
     }
     private void initIpCache(){
         ipListCache=new IpListCache(this);
-        whiteIpList=ipListCache.getWhiteIpList();
-        if(whiteIpList==null){
-            whiteIpList=new HashSet<>();
-        }
-        blackIpList=ipListCache.getBlackIpList();
-        if(blackIpList==null){
-            blackIpList=new HashSet<>();
+        ipList =ipListCache.getIpList();
+        if(ipList ==null){
+            ipList =new HashSet<>();
         }
 
         vipListCache=new VipListCache(this);
@@ -113,9 +117,6 @@ public class  GenerateProxyActivity extends Activity {
                         mStatus=GENERATE_PROXY;
                         generate_text.setText("代理数量："+NetConfig.servers.size());
                         check.setEnabled(true);
-                        if((vip.isChecked() || manual.isChecked()) && NetConfig.validIps.size()>=VIP_VALID_MAX){
-                            generate.setEnabled(false);
-                        }
                         break;
                     case CHECK_UPDATE:
                         mStatus=CHECK_UPDATE;
@@ -195,11 +196,9 @@ public class  GenerateProxyActivity extends Activity {
         clearCache.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(blackIpList!=null){
-                    blackIpList.clear();
-                }
-                if(whiteIpList!=null){
-                    whiteIpList.clear();
+
+                if(ipList !=null){
+                    ipList.clear();
                 }
                 if(vipList!=null){
                     vipList.clear();
@@ -283,8 +282,8 @@ public class  GenerateProxyActivity extends Activity {
                 get.setHeader("User-Agent", NetConfig.agent);
 
                 HttpParams params = new BasicHttpParams();
-                HttpConnectionParams.setConnectionTimeout(params, TIME_OUT); //设置连接超时
-                HttpConnectionParams.setSoTimeout(params, TIME_OUT); //设置请求超时
+                HttpConnectionParams.setConnectionTimeout(params, GET_PROXYS_TIME_OUT); //设置连接超时
+                HttpConnectionParams.setSoTimeout(params, GET_PROXYS_TIME_OUT); //设置请求超时
                 get.setParams(params);
 
                 HttpClient hClient = null;
@@ -323,16 +322,25 @@ public class  GenerateProxyActivity extends Activity {
         }.start();
     }
     private void generateProxys(final int click_count){
+        if(!isLocalIpLoaded){
+            Log.i("ly","load local ip proxy");
+            isLocalIpLoaded=true;
+            NetConfig.servers.addAll(ipList);
+            ipList.clear();
+            handler.sendEmptyMessage(GENERATE_PROXY);
+            return;
+        }
         final int page=click_count;
         new Thread(){
             public void run() {
+
                 HttpGet get=new HttpGet(NetConfig.URL_GETPROXY+page);
                 get.setHeader("Cache-Control", "no-cache");
                 get.setHeader("User-Agent", NetConfig.agent);
 
                 HttpParams params = new BasicHttpParams();
-                HttpConnectionParams.setConnectionTimeout(params, TIME_OUT); //设置连接超时
-                HttpConnectionParams.setSoTimeout(params, TIME_OUT); //设置请求超时
+                HttpConnectionParams.setConnectionTimeout(params, GET_PROXYS_TIME_OUT); //设置连接超时
+                HttpConnectionParams.setSoTimeout(params, GET_PROXYS_TIME_OUT); //设置请求超时
                 get.setParams(params);
 
                 HttpClient hClient = null;
@@ -376,8 +384,8 @@ public class  GenerateProxyActivity extends Activity {
         Boolean ret=false;
         Socket s=new Socket();
         try {
-            s.setSoTimeout(TIME_OUT);
-            s.connect(new InetSocketAddress(ip, Integer.parseInt(port)), TIME_OUT);
+            s.setSoTimeout(CHECK_PROXYS_TIME_OUT);
+            s.connect(new InetSocketAddress(ip, Integer.parseInt(port)), CHECK_PROXYS_TIME_OUT);
             ret=s.isConnected();
         } catch (IOException e) {
             Log.i("ly","connect error-->"+e.toString());
@@ -391,14 +399,11 @@ public class  GenerateProxyActivity extends Activity {
             return ret;
         }
     }
-    private boolean isValidIP(final String ip,String port){
-        if(filter.isChecked()){
-            if(whiteIpList.contains(ip)){
+    private boolean isValidIP(final String ip,final String port){
+        if(/*filter.isChecked()*/true){
+            if(ipList.contains(new Server(ip,port))){
                 Log.i("ly","in white list");
                 return true;
-            }else if(blackIpList.contains(ip)){
-                Log.i("ly","in black list");
-                return false;
             }else{
                 /*新ip，重新检测*/
             }
@@ -408,8 +413,8 @@ public class  GenerateProxyActivity extends Activity {
         get.setHeader("Cache-Control", "no-cache");
 
         HttpParams params = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(params, TIME_OUT); //设置连接超时
-        HttpConnectionParams.setSoTimeout(params, TIME_OUT); //设置请求超时
+        HttpConnectionParams.setConnectionTimeout(params, GET_PROXYS_TIME_OUT); //设置连接超时
+        HttpConnectionParams.setSoTimeout(params, GET_PROXYS_TIME_OUT); //设置请求超时
         get.setParams(params);
 
         System.setProperty("http.proxyHost", ip);
@@ -422,16 +427,12 @@ public class  GenerateProxyActivity extends Activity {
             hClient=new DefaultHttpClient();
             HttpResponse  hResponse=hClient.execute(get);
             if(hResponse.getStatusLine().getStatusCode()==200){
-                if(filter.isChecked()){
-                    whiteIpList.add(ip);
-                    Log.i("ly", "add white list");
+                if(/*filter.isChecked()*/true){
+                    ipList.add(new Server(ip,port));
+                    Log.i("ly", "add ip list");
                 }
                 return true;
             }else{
-                if(filter.isChecked()){
-                    blackIpList.add(ip);
-                    Log.i("ly", "add black list");
-                }
 
                 return false;
             }
@@ -439,10 +440,6 @@ public class  GenerateProxyActivity extends Activity {
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            if(filter.isChecked()){
-                blackIpList.add(ip);
-                Log.i("ly", "add black list");
-            }
             return false;
         }
     }
@@ -468,13 +465,16 @@ public class  GenerateProxyActivity extends Activity {
 
         ProxySetting.cancelProxy();
 
-        if(filter.isChecked()){
-            ipListCache.saveBlackIpList(blackIpList);
-            ipListCache.saveWhiteIpList(whiteIpList);
+        if(/*filter.isChecked()*/mStatus==CHECK_FINISH){
+            HashSet<Server> temp=new HashSet<>();
+            temp.addAll(NetConfig.validIps);
+            ipListCache.saveIpList(temp);
+            temp.clear();
         }
         if (vip.isChecked() && mStatus==CHECK_FINISH){
             HashSet<Server> temp=new HashSet<>();
-            temp.addAll(NetConfig.validIps);
+            //temp.addAll(NetConfig.servers);//vip代理很珍贵，每次获取的都保存（上次保存的+新获取的）,时效性通过清除缓存维护
+            temp.addAll(NetConfig.validIps);//每次仅保留有效的vip回写到本地
             vipListCache.saveVipList(temp);
             temp.clear();
         }
@@ -494,7 +494,7 @@ public class  GenerateProxyActivity extends Activity {
             try
             {
                 Process p = Runtime.getRuntime().exec(
-                        "ping -c 1 -w "+TIME_OUT/1000+" " + mServer.ip);
+                        "ping -c 1 -w "+ CHECK_PROXYS_TIME_OUT /1000+" " + mServer.ip);
 
                 int status = p.waitFor();
                 if (status == 0)

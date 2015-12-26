@@ -9,7 +9,7 @@ public class NetConfig {
 
 	public static final String URL_GETPROXY="http://www.xicidaili.com/nn/";
 	public static final String VIPURL_GETPROXY ="http://xvre.daili666api.com/ip/?" +
-			"tid=559484726216210&num=10&delay=1&category=2&foreign=none&filter=on";
+			"tid=559484726216210&num=50&delay=1&category=2&foreign=none";
 	public static String[] manualProxys=new String[]{
 			"111.203.244.4:8081",
 			"117.136.234.9:81",
@@ -19,7 +19,8 @@ public class NetConfig {
 			"180.166.112.47:8888",
 			"195.186.81.94:80",
 			"195.186.81.92:80",
-			"111.202.71.60:8080"
+			"111.202.71.60:8080",
+
 	};
 	public static String home = "http://i.youku.com/u/UMzE0NDI3NTg3Ng==";
 	public static final String agent="Mozilla/5.0 (Windows NT 6.1; WOW64) " +

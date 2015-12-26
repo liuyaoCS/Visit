@@ -23,30 +23,21 @@ public class IpListCache {
         this.context = _context;
     }
 
-    public void saveWhiteIpList(HashSet<String> datas){
-        write(getWhiteIpListCacheFilePath(),datas);
-    }
-    public void saveBlackIpList(HashSet<String> datas){
-        write(getBlackIpListCacheFilePath(),datas);
+    public void saveIpList(HashSet<Server> datas){
+        write(getIpListCacheFilePath(),datas);
     }
 
-    public HashSet<String> getWhiteIpList(){
-        return read(getWhiteIpListCacheFilePath());
-    }
-    public HashSet<String> getBlackIpList(){
-        return read(getBlackIpListCacheFilePath());
+    public HashSet<Server> getIpList(){
+        return read(getIpListCacheFilePath());
     }
 
-    private String getWhiteIpListCacheFilePath() {
+    private String getIpListCacheFilePath() {
         return context.getCacheDir().getPath() + File.separator
-                + "whiteIpList";
-    }
-    private String getBlackIpListCacheFilePath() {
-        return context.getCacheDir().getPath() + File.separator
-                + "blackIpList";
+                + "ipList";
     }
 
-    private void write(String fileName, HashSet<String> _datas){
+
+    private void write(String fileName, HashSet<Server> _datas){
         if (_datas == null) {
             return;
         }
@@ -72,13 +63,13 @@ public class IpListCache {
     }
 
     @SuppressWarnings("unchecked")
-    private HashSet<String> read(String fileName){
-        HashSet<String> datas = null;
+    private HashSet<Server> read(String fileName){
+        HashSet<Server> datas = null;
         ObjectInputStream ois = null;
         try {
             ois = new ObjectInputStream(new FileInputStream(fileName));
-            datas = new HashSet<String>();
-            datas = (HashSet<String>)ois.readObject();
+            datas = new HashSet<Server>();
+            datas = (HashSet<Server>)ois.readObject();
         } catch (ClassNotFoundException e){
             e.printStackTrace();
         } catch (StreamCorruptedException e) {
