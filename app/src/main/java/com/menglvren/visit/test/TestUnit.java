@@ -2,6 +2,7 @@ package com.menglvren.visit.test;
 
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.menglvren.visit.NetConfig;
 import com.menglvren.visit.model.Server;
@@ -54,6 +55,17 @@ public class TestUnit {
             Log.e("ly","fetch err->"+e.toString());
         }
     }
+    public static void savedVIP (Context context,StringBuilder sb)throws Exception{
+        String filename=context.getExternalCacheDir().getPath()+File.separator+"proxy-seeds.txt";
+        File file=new File(filename);
+        FileWriter fw=new FileWriter(file,true);
+        PrintWriter pw=new PrintWriter(fw);
+        pw.write(sb.toString());
+        pw.flush();
+        Log.i("ly", "vip已经保存到" + filename);
+        pw.close();
+    }
+
     public static void action(Context context,HttpResponse hResponse) throws  Exception{
 
         FileWriter fw=null;

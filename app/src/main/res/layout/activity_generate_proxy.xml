@@ -34,14 +34,14 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/manual"
                 android:text="手动"
-                android:visibility="visible"
+                android:visibility="gone"
                 />
             <RadioButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/vip"
                 android:text=" VIP  "
-                android:visibility="gone"
+                android:visibility="visible"
                 />
         </RadioGroup>
 

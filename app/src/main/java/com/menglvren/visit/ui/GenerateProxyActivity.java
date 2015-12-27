@@ -19,6 +19,7 @@ import com.menglvren.visit.model.IpListCache;
 import com.menglvren.visit.model.Server;
 import com.menglvren.visit.model.VipListCache;
 import com.menglvren.visit.test.TestActivity;
+import com.menglvren.visit.test.TestUnit;
 import com.menglvren.visit.util.DataCleanManager;
 import com.menglvren.visit.util.ProxySetting;
 
@@ -55,8 +56,8 @@ public class  GenerateProxyActivity extends Activity {
     private final int MSG_ARG_UPDATE_VALID=0;
     private final int MSG_ARG_UPDATE_INVALID=1;
 
-    private final int GET_PROXYS_TIME_OUT =2*1000;
-    private final int CHECK_PROXYS_TIME_OUT =1*1000;
+    private final int GET_PROXYS_TIME_OUT =3*1000;
+    private final int CHECK_PROXYS_TIME_OUT =2*1000;
     //private final int VIP_VALID_MAX=100;
 
     private int generate_click_count=0;
@@ -308,6 +309,7 @@ public class  GenerateProxyActivity extends Activity {
                             }
 
                         }
+                        TestUnit.savedVIP(GenerateProxyActivity.this,sbBuilder);
                         br.close();
 
                         handler.sendEmptyMessage(GENERATE_PROXY);
