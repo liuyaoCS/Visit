@@ -400,7 +400,7 @@ public class  GenerateProxyActivity extends Activity {
         }
     }
     private boolean isValidIP(final String ip,final String port){
-        if(/*filter.isChecked()*/true){
+        if(filter.isChecked()){
             if(ipList.contains(new Server(ip,port))){
                 Log.i("ly","in white list");
                 return true;
@@ -427,7 +427,7 @@ public class  GenerateProxyActivity extends Activity {
             hClient=new DefaultHttpClient();
             HttpResponse  hResponse=hClient.execute(get);
             if(hResponse.getStatusLine().getStatusCode()==200){
-                if(/*filter.isChecked()*/true){
+                if(filter.isChecked()){
                     ipList.add(new Server(ip,port));
                     Log.i("ly", "add ip list");
                 }
@@ -465,7 +465,7 @@ public class  GenerateProxyActivity extends Activity {
 
         ProxySetting.cancelProxy();
 
-        if(/*filter.isChecked()*/mStatus==CHECK_FINISH){
+        if(mStatus==CHECK_FINISH){
             HashSet<Server> temp=new HashSet<>();
             temp.addAll(NetConfig.validIps);
             ipListCache.saveIpList(temp);
