@@ -186,6 +186,10 @@ public class MainActivity extends Activity {
         Server errServer=new Server(ip,port);
         if(NetConfig.validIps.contains(errServer)) {
             NetConfig.validIps.remove(errServer);
+            if(NetConfig.validIps.size()==0){
+                Toast.makeText(MainActivity.this,"代理已清空",Toast.LENGTH_SHORT).show();
+                finish();
+            }
             NetConfig.validIpIndex=(NetConfig.validIpIndex-1+NetConfig.validIps.size())%NetConfig.validIps.size();
             Log.i("ly", "remove ip-->" + ip + " from validIps");
         }

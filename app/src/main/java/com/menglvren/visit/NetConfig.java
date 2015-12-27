@@ -20,7 +20,6 @@ public class NetConfig {
 			"195.186.81.94:80",
 			"195.186.81.92:80",
 			"111.202.71.60:8080",
-
 	};
 	public static String home = "http://i.youku.com/u/UMzE0NDI3NTg3Ng==";
 	public static final String agent="Mozilla/5.0 (Windows NT 6.1; WOW64) " +
