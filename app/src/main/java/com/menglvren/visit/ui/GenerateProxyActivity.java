@@ -117,6 +117,7 @@ public class  GenerateProxyActivity extends Activity {
                         mStatus=GENERATE_PROXY;
                         generate_text.setText("代理数量："+NetConfig.servers.size());
                         check.setEnabled(true);
+                        generate.setEnabled(!manual.isChecked());
                         break;
                     case CHECK_UPDATE:
                         mStatus=CHECK_UPDATE;
