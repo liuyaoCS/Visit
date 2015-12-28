@@ -21,12 +21,14 @@ import com.menglvren.visit.NetConfig;
 import com.menglvren.visit.R;
 import com.menglvren.visit.model.IpListCache;
 import com.menglvren.visit.model.Server;
+import com.menglvren.visit.model.VipListCache;
 import com.menglvren.visit.util.ProxySetting;
 
 import java.util.HashSet;
 
 /***
  * 每10s刷一个节目：载入节目页面后，3.5秒点击，点击耗时0.5秒，6秒播放
+ * 播放失败会删除相应代理，最后的有效代理在退出时会持久化存储
  */
 public class MainActivity extends Activity {
     public static final int EVENT_SIMULATE_CLICK = 0;
@@ -39,6 +41,7 @@ public class MainActivity extends Activity {
     Handler handler;
 
     boolean isJSInserted=false;
+    boolean vipFlag=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,13 +56,8 @@ public class MainActivity extends Activity {
                         setSimulateClick(newWeb, newWeb.getWidth() / 2, newWeb.getWidth() / 2);
                         break;
                     case EVENT_CHANGE_PROXY:
-                        Server server = NetConfig.validIps.get(NetConfig.validIpIndex);
-                        NetConfig.validIpIndex = (NetConfig.validIpIndex + 1) % NetConfig.validIps.size();
-                        Log.i("ly", "mainWeb status-->config proxy " + server.ip+":"+server.port);
-                        configProxy(newWeb, server.ip, Integer.parseInt(server.port));
-                        if(NetConfig.validIpIndex==0){
-                            Toast.makeText(MainActivity.this,"代理已用完",Toast.LENGTH_SHORT).show();
-                        }
+                        configProxy(newWeb);
+                        updateIndex(1);
                         break;
                     default:
                         break;
@@ -68,7 +66,7 @@ public class MainActivity extends Activity {
             }
         });
 
-
+        vipFlag=getIntent().getBooleanExtra("isVip",false);
         configMainWeb();
         configNewWeb();
     }
@@ -149,6 +147,8 @@ public class MainActivity extends Activity {
                 if (!isValid(view.getTitle(), url)) {
                     removeCurrentProxy();
                     //view.stopLoading();
+                    updateIndex(1);
+                    configProxy(newWeb);
                     return;
                 }
                 super.onPageStarted(view, url, favicon);
@@ -173,26 +173,59 @@ public class MainActivity extends Activity {
     private boolean isValid(String title,String url){
         if(title.contains("找不到网页")
             || title.contains("403")
+            || title.contains("404")
             || title.contains("ERROR")
+            || title.contains("错误")
+            || url.contains("403")
             || url.contains("404")){
             return false;
         }
         return true;
     }
+    private void updateIndex(int delt){
+        if(NetConfig.validIps.size()==0){
+            Toast.makeText(MainActivity.this,"代理已清空",Toast.LENGTH_SHORT).show();
+            finish();
+        }else{
+            NetConfig.validIpIndex=(NetConfig.validIpIndex+delt+NetConfig.validIps.size())%NetConfig.validIps.size();
+            if(NetConfig.validIpIndex==0){
+                //Toast.makeText(MainActivity.this,"代理已用完",Toast.LENGTH_SHORT).show();
+            }
+        }
 
+    }
     private void removeCurrentProxy(){
         String ip=System.getProperty("http.proxyHost");
         String port=System.getProperty("http.proxyPort");
         Server errServer=new Server(ip,port);
         if(NetConfig.validIps.contains(errServer)) {
             NetConfig.validIps.remove(errServer);
-            if(NetConfig.validIps.size()==0){
-                Toast.makeText(MainActivity.this,"代理已清空",Toast.LENGTH_SHORT).show();
-                finish();
-            }
-            NetConfig.validIpIndex=(NetConfig.validIpIndex-1+NetConfig.validIps.size())%NetConfig.validIps.size();
-            Log.i("ly", "remove ip-->" + ip + " from validIps");
+            Log.i("ly", "remove ip-->" + ip + " from validIps, validIps size-->" + NetConfig.validIps.size());
+            updateIndex(-1);
         }
+    }
+    private void configProxy(WebView web){
+        Server server = NetConfig.validIps.get(NetConfig.validIpIndex);
+        Log.i("ly", "mainWeb status-->config proxy " + server.ip+":"+server.port);
+        String ip=server.ip;
+        int port=Integer.parseInt(server.port);
+        if(Build.VERSION.SDK_INT== Build.VERSION_CODES.KITKAT){
+            ProxySetting.setKitKatWebViewProxy(web.getContext().getApplicationContext(), ip, port);
+        }else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN
+                && Build.VERSION.SDK_INT<Build.VERSION_CODES.KITKAT){
+            ProxySetting.setProxyICSPlus(web,ip,port,"");
+        }else if(Build.VERSION.SDK_INT==Build.VERSION_CODES.ICE_CREAM_SANDWICH
+                || Build.VERSION.SDK_INT==Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1){
+            ProxySetting.setProxyICS(web,ip,port);
+        }else if(Build.VERSION.SDK_INT<=Build.VERSION_CODES.HONEYCOMB_MR2){
+            ProxySetting.setProxyUpToHC(web,ip,port);
+        }else {
+            Toast.makeText(MainActivity.this, "仅支持android4.4及以下系统", Toast.LENGTH_LONG).show();
+        }
+
+        web.clearCache(true);
+        web.clearHistory();
+        web.clearFormData();
     }
     private void configProxy(WebView web,String ip,int port){
         if(Build.VERSION.SDK_INT== Build.VERSION_CODES.KITKAT){
@@ -209,7 +242,6 @@ public class MainActivity extends Activity {
             Toast.makeText(MainActivity.this, "仅支持android4.4及以下系统", Toast.LENGTH_LONG).show();
         }
 
-        //
         web.clearCache(true);
         web.clearHistory();
         web.clearFormData();
@@ -262,6 +294,14 @@ public class MainActivity extends Activity {
         HashSet<Server> temp=new HashSet<>();
         temp.addAll(NetConfig.validIps);
         ipListCache.saveIpList(temp);
+
+        if(vipFlag){
+            VipListCache vipListCache=new VipListCache(MainActivity.this);
+            HashSet<Server> temp1=new HashSet<>();
+            temp1.addAll(NetConfig.validIps);
+            vipListCache.saveVipList(temp1);
+        }
+
         NetConfig.servers.clear();
         NetConfig.validIps.clear();
         NetConfig.badIps.clear();

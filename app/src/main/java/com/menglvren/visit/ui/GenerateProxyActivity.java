@@ -42,6 +42,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 生成代理：1 默认 手动+上次缓存的有效ip(含vip) 2 vip 手动+上次缓存的vip
+ * 检测代理：1 默认 访问相应网页 2 socket（建议）
+ */
 public class  GenerateProxyActivity extends Activity {
     Button generate,check,start,clearCache;
     TextView generate_text,check_text,log;
@@ -271,8 +275,17 @@ public class  GenerateProxyActivity extends Activity {
         if(!isLocalVipLoaded){
             Log.i("ly","load local vip proxy");
             isLocalVipLoaded=true;
+            //本地（手动vip+上次有效的vip）
+            for(String line:NetConfig.manualProxys){
+                int index=line.indexOf(":");
+                String ip=line.substring(0, index);
+                String port=line.substring(index+1);
+                vipList.add(new Server(ip, port));
+            }
+
             NetConfig.servers.addAll(vipList);
             vipList.clear();
+
             handler.sendEmptyMessage(GENERATE_PROXY);
             return;
         }
@@ -327,8 +340,17 @@ public class  GenerateProxyActivity extends Activity {
         if(!isLocalIpLoaded){
             Log.i("ly","load local ip proxy");
             isLocalIpLoaded=true;
+            //本地（手动vip+上次有效的ip(含vip)）
+            for(String line:NetConfig.manualProxys){
+                int index=line.indexOf(":");
+                String ip=line.substring(0, index);
+                String port=line.substring(index+1);
+                ipList.add(new Server(ip, port));
+            }
+
             NetConfig.servers.addAll(ipList);
             ipList.clear();
+
             handler.sendEmptyMessage(GENERATE_PROXY);
             return;
         }
@@ -451,7 +473,8 @@ public class  GenerateProxyActivity extends Activity {
             return;
         }
         clearAndSave();
-        Intent it=new Intent(GenerateProxyActivity.this,NetConfig.isDebug?TestActivity.class:MainActivity.class);
+        Intent it=new Intent(GenerateProxyActivity.this,MainActivity.class);
+        it.putExtra("isVip",vip.isChecked());
         startActivity(it);
 
     }
@@ -475,7 +498,6 @@ public class  GenerateProxyActivity extends Activity {
         }
         if (vip.isChecked() && mStatus==CHECK_FINISH){
             HashSet<Server> temp=new HashSet<>();
-            //temp.addAll(NetConfig.servers);//vip代理很珍贵，每次获取的都保存（上次保存的+新获取的）,时效性通过清除缓存维护
             temp.addAll(NetConfig.validIps);//每次仅保留有效的vip回写到本地
             vipListCache.saveVipList(temp);
             temp.clear();
