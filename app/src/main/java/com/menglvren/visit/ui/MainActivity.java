@@ -200,8 +200,13 @@ public class MainActivity extends Activity {
         }else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.JELLY_BEAN
                 && Build.VERSION.SDK_INT<Build.VERSION_CODES.KITKAT){
             ProxySetting.setProxyICSPlus(web,ip,port,"");
-        }else{
-            Toast.makeText(MainActivity.this, "仅支持android版本4.1-4.4", Toast.LENGTH_LONG).show();
+        }else if(Build.VERSION.SDK_INT==Build.VERSION_CODES.ICE_CREAM_SANDWICH
+                || Build.VERSION.SDK_INT==Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1){
+            ProxySetting.setProxyICS(web,ip,port);
+        }else if(Build.VERSION.SDK_INT<=Build.VERSION_CODES.HONEYCOMB_MR2){
+            ProxySetting.setProxyUpToHC(web,ip,port);
+        }else {
+            Toast.makeText(MainActivity.this, "仅支持android4.4及以下系统", Toast.LENGTH_LONG).show();
         }
 
         //

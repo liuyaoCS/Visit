@@ -18,7 +18,6 @@ import com.menglvren.visit.NetConfig;
 import com.menglvren.visit.R;
 import com.menglvren.visit.util.ProxySetting;
 
-
 public class TestActivity extends Activity {
 
     WebView web;
