@@ -175,6 +175,7 @@ public class MainActivity extends Activity {
             || title.contains("403")
             || title.contains("404")
             || title.contains("ERROR")
+            || title.contains("Proxy")
             || title.contains("错误")
             || url.contains("403")
             || url.contains("404")){
