@@ -61,7 +61,7 @@ public class  GenerateProxyActivity extends Activity {
     private final int MSG_ARG_UPDATE_INVALID=1;
 
     private final int GET_PROXYS_TIME_OUT =3*1000;
-    private final int CHECK_PROXYS_TIME_OUT =2*1000;
+    private final int CHECK_PROXYS_TIME_OUT =3*1000;
     //private final int VIP_VALID_MAX=100;
 
     private int generate_click_count=0;
